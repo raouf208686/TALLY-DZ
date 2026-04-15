@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tally DZ - Multi Clients</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- MODIFIER ICI POUR AJOUTER CLIENTS -->
+    <script>
+        const CLIENTS = {
+            "test": {
+                name: "متجر تجريبي",
+                whatsapp: "213555000000",
+                ccp: "CCP: 0000000 CLÉ 00 - Test",
+                product: "منتج تجريبي",
+                price: 1000,
+                image: "https://via.placeholder.com/400x400.png?text=صورة+المنتج"
+            }
+            // زيد العملاء تاعك هنا
+            // "amine": { name: "...", whatsapp: "213...",... },
+        };
+
+        const SHIPPING_RATES = {
+            "1": { name: "أدرار", home: 1300, stopdesk: 800 },
+            "16": { name: "الجزائر", home: 500, stopdesk: 400 },
+            "31": { name: "وهران", home: 700, stopdesk: 450 },
+            // باقي الولايات...
+        };
+
+        const WEBHOOK_URL = ""; // نحطو رابط Make.com من بعد
+    </script>
+
+    <div id="app" class="max-w-md mx-auto p-4">
+        <div id="content"></div>
+    </div>
+
+    <script>
+        // الكود يجيب معلومات العميل من الرابط?id=
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientId = urlParams.get('id');
+        const client = CLIENTS[clientId];
+        const content = document.getElementById('content');
+
+        if (!client) {
+            content.innerHTML = `
+                <div class="bg-white p-8 rounded-lg shadow text-center">
+                    <h1 class="text-2xl font-bold text-red-600 mb-4">الحساب غير موجود</h1>
+                    <p class="text-gray-600">تأكد من الرابط أو اتصل بصاحب المتجر</p>
+                </div>
+            `;
+        } else {
+            content.innerHTML = `
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <img src="${client.image}" class="w-full h-64 object-cover">
+                    <div class="p-6">
+                        <p class="text-sm text-gray-500">${client.name}</p>
+                        <h1 class="text-2xl font-bold mb-2">${client.product}</h1>
+                        <p class="text-3xl font-bold text-green-600 mb-6">${client.price} دج</p>
+
+                        <form id="orderForm" class="space-y-4">
+                            <input type="text" id="name" placeholder="الاسم الكامل" required class="w-full p-3 border rounded-lg">
+                            <input type="tel" id="phone" placeholder="رقم الهاتف" required class="w-full p-3 border rounded-lg">
+
+                            <select id="wilaya" required class="w-full p-3 border rounded-lg">
+                                <option value="">اختر الولاية</option>
+                                ${Object.entries(SHIPPING_RATES).map(([id, w]) =>
+                                    `<option value="${id}">${w.name}</option>`
+                                ).join('')}
+                            </select>
+
+                            <select id="deliveryType" required class="w-full p-3 border rounded-lg">
+                                <option value="home">توصيل للمنزل</option>
+                                <option value="stopdesk">توصيل للمكتب</option>
+                            </select>
+
+                            <div id="totalBox" class="bg-green-50 p-4 rounded-lg text-center hidden">
+                                <p class="text-gray-600">المجموع الكلي</p>
+                                <p id="totalPrice" class="text-2xl font-bold text-green-700"></p>
+                            </div>
+
+                            <button type="submit" class="w-full bg-green-600 text-white p-4 rounded-lg font-bold text-lg">
+                                تأكيد الطلب عبر واتساب
+                            </button>
+                        </form>
+
+                        <div class="mt-6 p-4 bg-blue-50 rounded-lg text-sm">
+                            <p class="font-bold mb-2">الدفع عند الاستلام متاح</p>
+                            <p>أو سبق ${client.ccp}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // حساب السعر
+            const wilayaSelect = document.getElementById('wilaya');
+            const deliverySelect = document.getElementById('deliveryType');
+            const totalBox = document.getElementById('totalBox');
+            const totalPrice = document.getElementById('totalPrice');
+
+            function updateTotal() {
+                const wilayaId = wilayaSelect.value;
+                const deliveryType = deliverySelect.value;
+                if (wilayaId && deliveryType) {
+                    const shipping = SHIPPING_RATES[wilayaId][deliveryType];
+                    const total = client.price + shipping;
+                    totalPrice.textContent = total + ' دج';
+                    totalBox.classList.remove('hidden');
+                }
+            }
+
+            wilayaSelect.addEventListener('change', updateTotal);
+            deliverySelect.addEventListener('change', updateTotal);
+
+            // إرسال للواتساب
+            document.getElementById('orderForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('name').value;
+                const phone = document.getElementById('phone').value;
+                const wilayaId = wilayaSelect.value;
+                const wilayaName = SHIPPING_RATES[wilayaId].name;
+                const deliveryType = deliverySelect.value === 'home'? 'للمنزل' : 'للمكتب';
+                const shipping = SHIPPING_RATES[wilayaId][deliverySelect.value];
+                const total = client.price + shipping;
+
+                const msg = `طلب جديد 🔔%0A%0Aالمتجر: ${client.name}%0Aالمنتج: ${client.product}%0Aالاسم: ${name}%0Aالهاتف: ${phone}%0Aالولاية: ${wilayaName}%0Aالتوصيل: ${deliveryType} - ${shipping} دج%0Aالمجموع: ${total} دج`;
+
+                window.open(`https://wa.me/${client.whatsapp}?text=${msg}`, '_blank');
+            });
+        }
+    </script>
+</body>
+</html>
