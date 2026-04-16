@@ -1,1 +1,1 @@
-{ nom: "", image: "https://via.placeholder.com/400x400.png?text=صورة+المنتج", prix:  }, 
+{ id: recQvdkySMqmPKxOJ, name: "متجر تجريبي", price: 1000 }
