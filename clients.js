@@ -1,1 +1,1 @@
-10. Final JS
+{ nom: "", image: "https://via.placeholder.com/400x400.png?text=صورة+المنتج", prix:  }, 
